@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel de Controle</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-5 font-sans">
+  <h1 class="text-3xl mb-4">Painel do Consultório</h1>
+  
+  <!-- Navegação entre abas -->
+  <div class="mb-6">
+    <div class="flex flex-wrap border-b border-gray-600">
+      <button onclick="showTab('alertasTab')" id="alertasTabBtn" class="px-4 py-2 text-blue-400 focus:outline-none tab-active">Alertas</button>
+      <button onclick="showTab('tarefasTab')" id="tarefasTabBtn" class="px-4 py-2 text-gray-400 focus:outline-none">Tarefas</button>
+      <button onclick="showTab('midiaTab')" id="midiaTabBtn" class="px-4 py-2 text-gray-400 focus:outline-none">Mídias</button>
+      <button onclick="showTab('agendaTab')" id="agendaTabBtn" class="px-4 py-2 text-gray-400 focus:outline-none">Agenda</button>
+      <button onclick="showTab('qrcodeTab')" id="qrcodeTabBtn" class="px-4 py-2 text-gray-400 focus:outline-none">QR Code</button>
+      <button onclick="showTab('enqueteTab')" id="enqueteTabBtn" class="px-4 py-2 text-gray-400 focus:outline-none">Enquete</button>
+    </div>
+  </div>
+  
+  <div class="tab-content">
+    <!-- Aba de Alertas -->
+    <div id="alertasTab" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Seção de Alertas -->
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl mb-3 border-b pb-2">Enviar Alerta</h2>
+        
+        <label class="block mb-2">Mensagem:</label>
+        <input id="message" type="text" class="w-full p-2 text-black mb-4"/>
+        
+        <label class="block mb-2">Tipo de Som:</label>
+        <select id="soundType" class="w-full text-black p-2 mb-4">
+          <option value="default">Padrão</option>
+          <option value="emergency">Emergência</option>
+          <option value="notification">Notificação</option>
+          <option value="reminder">Lembrete</option>
+        </select>
+        
+        <label class="block mb-2">Duração (ms):</label>
+        <input id="alertDuration" type="number" value="10000" class="w-full p-2 text-black mb-4"/>
+
+        <label class="block mb-2">Enviar para:</label>
+        <select id="target" class="w-full text-black p-2 mb-4">
+          <option value="admin">TV Admin</option>
+          <option value="recepcao">TV Recepção</option>
+          <option value="all">Todas</option>
+        </select>
+
+        <button onclick="enviarAlerta()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 w-full rounded transition-colors">
+          Enviar Alerta
+        </button>
+        
+        <div id="alertFeedback" class="hidden mt-3 p-2 text-center"></div>
+      </div>
+      
+      <!-- Seção de Notificações Programadas -->
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl mb-3 border-b pb-2">Programar Notificação</h2>
+        
+        <label class="block mb-2">Mensagem:</label>
+        <input id="scheduledMessage" type="text" class="w-full p-2 text-black mb-4"/>
+        
+        <label class="block mb-2">Tipo de Som:</label>
+        <select id="scheduledSoundType" class="w-full text-black p-2 mb-4">
+          <option value="default">Padrão</option>
+          <option value="emergency">Emergência</option>
+          <option value="notification">Notificação</option>
+          <option value="reminder">Lembrete</option>
+        </select>
+        
+        <label class="block mb-2">Data e Hora:</label>
+        <input id="scheduledDateTime" type="datetime-local" class="w-full p-2 text-black mb-4"/>
+        
+        <label class="block mb-2">Duração (ms):</label>
+        <input id="scheduledDuration" type="number" value="10000" class="w-full p-2 text-black mb-4"/>
+
+        <button onclick="agendarNotificacao()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 w-full rounded transition-colors">
+          Agendar Notificação
+        </button>
+        
+        <div id="scheduledFeedback" class="hidden mt-3 p-2 text-center"></div>
+      </div>
+    </div>
+    
+    <!-- Aba de Tarefas -->
+    <div id="tarefasTab" class="grid grid-cols-1 md:grid-cols-1 gap-6 hidden">
+      <!-- Seção de Tarefas -->
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl mb-3 border-b pb-2">Gerenciar Tarefas</h2>
+        
+        <div class="mb-3">
+          <label class="block mb-2">Nova tarefa:</label>
+          <div class="flex">
+            <input id="newTask" type="text" class="flex-1 p-2 text-black"/>
+            <button onclick="adicionarTarefa()" class="bg-green-600 hover:bg-green-700 px-3 ml-2 rounded transition-colors">
+              Adicionar
+            </button>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="block mb-2">Lista de tarefas:</label>
+          <ul id="taskList" class="bg-gray-700 rounded p-2 max-h-60 overflow-y-auto">
+            <li class="text-gray-400 italic">Nenhuma tarefa adicionada</li>
+          </ul>
+        </div>
+        
+        <button onclick="enviarTarefas()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 w-full rounded transition-colors">
+          Atualizar Tarefas na TV
+        </button>
+        
+        <div id="taskFeedback" class="hidden mt-3 p-2 text-center"></div>
+      </div>
+    </div>
+    
+    <!-- Aba de Mídias -->
+    <div id="midiaTab" class="grid grid-cols-1 md:grid-cols-1 gap-6 hidden">
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl mb-3 border-b pb-2">Enviar Mídia</h2>
+        
+        <label class="block mb-2">Tipo de Mídia:</label>
+        <select id="mediaType" class="w-full text-black p-2 mb-4">
+          <option value="image">Imagem</option>
+          <option value="video">Vídeo</option>
+        </select>
+        
+        <label class="block mb-2">URL da Mídia:</label>
+        <input id="mediaUrl" type="text" class="w-full p-2 text-black mb-4" placeholder="https://exemplo.com/imagem.jpg"/>
+        
+        <label class="block mb-2">Legenda:</label>
+        <input id="mediaCaption" type="text" class="w-full p-2 text-black mb-4"/>
+        
+        <button onclick="enviarMidia()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 w-full rounded transition-colors">
+          Enviar Mídia para TV
+        </button>
+        
+        <div id="mediaFeedback" class="hidden mt-3 p-2 text-center"></div>
+      </div>
+    </div>
+    
+    <!-- Aba de Agenda -->
+    <div id="agendaTab" class="grid grid-cols-1 md:grid-cols-1 gap-6 hidden">
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl mb-3 border-b pb-2">Gerenciar Agenda</h2>
+        
+        <div id="agenda-items" class="mb-4">
+          <!-- Os itens da agenda serão adicionados aqui -->
+          <p class="text-gray-400 italic mb-2">Nenhum evento adicionado</p>
+        </div>
+        
+        <div class="border-t border-gray-600 pt-4">
+          <h3 class="text-lg mb-3">Adicionar Evento</h3>
+          
+          <label class="block mb-2">Horário:</label>
+          <input id="eventTime" type="time" class="w-full p-2 text-black mb-4"/>
+          
+          <label class="block mb-2">Título:</label>
+          <input id="eventTitle" type="text" class="w-full p-2 text-black mb-4"/>
+          
+          <label class="block mb-2">Descrição:</label>
+          <input id="eventDescription" type="text" class="w-full p-2 text-black mb-4"/>
+          
+          <button onclick="adicionarEvento()" class="bg-green-600 hover:bg-green-700 px-4 py-2 w-full rounded transition-colors mb-4">
+            Adicionar Evento
+          </button>
+          
+          <button onclick="enviarAgenda()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 w-full rounded transition-colors">
+            Atualizar Agenda na TV
+          </button>
+        </div>
+        
+        <div id="agendaFeedback" class="hidden mt-3 p-2 text-center"></div>
+      </div>
+    </div>
+    
+    <!-- Aba de QR Code -->
+    <div id="qrcodeTab" class="grid grid-cols-1 md:grid-cols-1 gap-6 hidden">
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl mb-3 border-b pb-2">Gerar QR Code</h2>
+        
+        <label class="block mb-2">URL para o QR Code:</label>
+        <input id="qrcodeUrl" type="text" class="w-full p-2 text-black mb-4" placeholder="https://exemplo.com"/>
+        
+        <label class="block mb-2">Texto Descritivo:</label>
+        <input id="qrcodeText" type="text" class="w-full p-2 text-black mb-4" placeholder="Escaneie para mais informações"/>
+        
+        <button onclick="enviarQRCode()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 w-full rounded transition-colors">
+          Enviar QR Code para TV
+        </button>
+        
+        <div id="qrcodeFeedback" class="hidden mt-3 p-2 text-center"></div>
+      </div>
+    </div>
+    
+    <!-- Aba de Enquete -->
+    <div id="enqueteTab" class="grid grid-cols-1 md:grid-cols-1 gap-6 hidden">
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl mb-3 border-b pb-2">Criar Enquete</h2>
+        
+        <label class="block mb-2">Pergunta:</label>
+        <input id="pollQuestion" type="text" class="w-full p-2 text-black mb-4"/>
+        
+        <div id="poll-options" class="mb-4">
+          <label class="block mb-2">Opções:</label>
+          
+          <div class="poll-option-item flex mb-2">
+            <input type="text" placeholder="Opção" class="flex-1 p-2 text-black poll-option-text"/>
+            <input type="number" placeholder="Votos" class="w-20 p-2 text-black ml-2 poll-option-votes"/>
+            <button onclick="removerOpcao(this)" class="bg-red-600 px-3 ml-2 rounded">
+              &times;
+            </button>
+          </div>
+          
+          <div class="poll-option-item flex mb-2">
+            <input type="text" placeholder="Opção" class="flex-1 p-2 text-black poll-option-text"/>
+            <input type="number" placeholder="Votos" class="w-20 p-2 text-black ml-2 poll-option-votes"/>
+            <button onclick="removerOpcao(this)" class="bg-red-600 px-3 ml-2 rounded">
+              &times;
+            </button>
+          </div>
+        </div>
+        
+        <button onclick="adicionarOpcao()" class="bg-green-600 hover:bg-green-700 px-4 py-2 w-full rounded transition-colors mb-4">
+          Adicionar Opção
+        </button>
+        
+        <button onclick="enviarEnquete()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 w-full rounded transition-colors">
+          Enviar Enquete para TV
+        </button>
+        
+        <div id="pollFeedback" class="hidden mt-3 p-2 text-center"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Detecta automaticamente o endereço do servidor
+    const socketURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3001' 
+      : window.location.origin;
+    
+    const socket = io(socketURL);
+    socket.emit("register", { type: "panel", id: "consultorio-1" });
+    
+    // Funções para manipulação de abas
+    function showTab(tabId) {
+      // Ocultar todas as abas
+      document.querySelectorAll('.tab-content > div').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      // Desativar todos os botões
+      document.querySelectorAll('[id$="TabBtn"]').forEach(btn => {
+        btn.classList.remove('text-blue-400');
+        btn.classList.add('text-gray-400');
+      });
+      
+      // Mostrar a aba selecionada
+      document.getElementById(tabId).classList.remove('hidden');
+      
+      // Ativar o botão correspondente
+      document.getElementById(tabId + 'Btn').classList.remove('text-gray-400');
+      document.getElementById(tabId + 'Btn').classList.add('text-blue-400');
+    }
+    
+    // Lista de tarefas atual
+    const tarefas = [];
+    
+    // Função para atualizar a lista de tarefas na interface
+    function atualizarListaTarefas() {
+      const taskList = document.getElementById("taskList");
+      
+      if (tarefas.length === 0) {
+        taskList.innerHTML = '<li class="text-gray-400 italic">Nenhuma tarefa adicionada</li>';
+        return;
+      }
+      
+      taskList.innerHTML = tarefas.map((tarefa, index) => `
+        <li class="py-1 px-2 flex justify-between items-center border-b border-gray-600">
+          <span>${tarefa}</span>
+          <button onclick="removerTarefa(${index})" class="text-red-500 hover:text-red-700">
+            &times;
+          </button>
+        </li>
+      `).join('');
+    }
+    
+    // Adicionar nova tarefa
+    function adicionarTarefa() {
+      const newTaskInput = document.getElementById("newTask");
+      const tarefa = newTaskInput.value.trim();
+      
+      if (tarefa) {
+        tarefas.push(tarefa);
+        newTaskInput.value = '';
+        atualizarListaTarefas();
+      }
+    }
+    
+    // Remover tarefa
+    function removerTarefa(index) {
+      tarefas.splice(index, 1);
+      atualizarListaTarefas();
+    }
+    
+    // Enviar tarefas para TVs
+    function enviarTarefas() {
+      const payload = {
+        type: "tasks",
+        tasks: tarefas
+      };
+      const target = document.getElementById("target").value;
+      socket.emit("send_message", { target, payload });
+      
+      // Feedback visual
+      mostrarFeedback("taskFeedback", "Tarefas atualizadas na TV!", "success");
+    }
+    
+    // Lista de eventos da agenda
+    const eventos = [];
+    
+    // Função para atualizar a lista de eventos na interface
+    function atualizarListaEventos() {
+      const container = document.getElementById("agenda-items");
+      
+      if (eventos.length === 0) {
+        container.innerHTML = '<p class="text-gray-400 italic mb-2">Nenhum evento adicionado</p>';
+        return;
+      }
+      
+      // Ordena os eventos por horário
+      eventos.sort((a, b) => {
+        return a.time.localeCompare(b.time);
+      });
+      
+      container.innerHTML = eventos.map((evento, index) => `
+        <div class="py-2 px-3 mb-2 bg-gray-700 rounded flex justify-between items-center">
+          <div>
+            <span class="font-bold">${evento.time}</span> - 
+            <span>${evento.title}</span>
+            <p class="text-sm text-gray-300">${evento.description || ''}</p>
+          </div>
+          <button onclick="removerEvento(${index})" class="text-red-500 hover:text-red-700">
+            &times;
+          </button>
+        </div>
+      `).join('');
+    }
+    
+    // Adicionar novo evento
+    function adicionarEvento() {
+      const time = document.getElementById("eventTime").value;
+      const title = document.getElementById("eventTitle").value.trim();
+      const description = document.getElementById("eventDescription").value.trim();
+      
+      if (time && title) {
+        eventos.push({ time, title, description });
+        
+        // Limpar campos
+        document.getElementById("eventTime").value = '';
+        document.getElementById("eventTitle").value = '';
+        document.getElementById("eventDescription").value = '';
+        
+        atualizarListaEventos();
+      } else {
+        mostrarFeedback("agendaFeedback", "Horário e título são obrigatórios!", "error");
+      }
+    }
+    
+    // Remover evento
+    function removerEvento(index) {
+      eventos.splice(index, 1);
+      atualizarListaEventos();
+    }
+    
+    // Enviar agenda para TVs
+    function enviarAgenda() {
+      const payload = {
+        type: "agenda",
+        events: eventos
+      };
+      const target = document.getElementById("target").value;
+      socket.emit("send_message", { target, payload });
+      
+      mostrarFeedback("agendaFeedback", "Agenda atualizada na TV!", "success");
+    }
+    
+    // Funções para enquete
+    function adicionarOpcao() {
+      const container = document.getElementById("poll-options");
+      const newOption = document.createElement("div");
+      newOption.className = "poll-option-item flex mb-2";
+      newOption.innerHTML = `
+        <input type="text" placeholder="Opção" class="flex-1 p-2 text-black poll-option-text"/>
+        <input type="number" placeholder="Votos" class="w-20 p-2 text-black ml-2 poll-option-votes"/>
+        <button onclick="removerOpcao(this)" class="bg-red-600 px-3 ml-2 rounded">
+          &times;
+        </button>
+      `;
+      container.appendChild(newOption);
+    }
+    
+    function removerOpcao(button) {
+      const container = document.getElementById("poll-options");
+      const optionItem = button.parentElement;
+      
+      // Não remover se for a única opção
+      if (container.querySelectorAll('.poll-option-item').length > 1) {
+        container.removeChild(optionItem);
+      }
+    }
+    
+    function enviarEnquete() {
+      const question = document.getElementById("pollQuestion").value.trim();
+      if (!question) {
+        mostrarFeedback("pollFeedback", "Digite uma pergunta para a enquete!", "error");
+        return;
+      }
+      
+      const options = [];
+      const optionItems = document.querySelectorAll('.poll-option-item');
+      
+      optionItems.forEach(item => {
+        const text = item.querySelector('.poll-option-text').value.trim();
+        const votesInput = item.querySelector('.poll-option-votes').value;
+        const votes = votesInput ? parseInt(votesInput) : 0;
+        
+        if (text) {
+          options.push({ text, votes });
+        }
+      });
+      
+      if (options.length < 2) {
+        mostrarFeedback("pollFeedback", "Adicione pelo menos duas opções!", "error");
+        return;
+      }
+      
+      const payload = {
+        type: "poll",
+        question: question,
+        options: options
+      };
+      
+      const target = document.getElementById("target").value;
+      socket.emit("send_message", { target, payload });
+      
+      mostrarFeedback("pollFeedback", "Enquete enviada para a TV!", "success");
+    }
+    
+    // Função para enviar QR Code
+    function enviarQRCode() {
+      const url = document.getElementById("qrcodeUrl").value.trim();
+      const text = document.getElementById("qrcodeText").value.trim();
+      
+      if (!url) {
+        mostrarFeedback("qrcodeFeedback", "Digite uma URL para o QR Code!", "error");
+        return;
+      }
+      
+      const payload = {
+        type: "qrcode",
+        url: url,
+        text: text
+      };
+      
+      const target = document.getElementById("target").value;
+      socket.emit("send_message", { target, payload });
+      
+      mostrarFeedback("qrcodeFeedback", "QR Code enviado para a TV!", "success");
+    }
+    
+    // Função para enviar mídia
+    function enviarMidia() {
+      const mediaType = document.getElementById("mediaType").value;
+      const mediaUrl = document.getElementById("mediaUrl").value.trim();
+      const mediaCaption = document.getElementById("mediaCaption").value.trim();
+      
+      if (!mediaUrl) {
+        mostrarFeedback("mediaFeedback", "Digite uma URL para a mídia!", "error");
+        return;
+      }
+      
+      const payload = {
+        type: "media",
+        mediaType: mediaType,
+        mediaUrl: mediaUrl,
+        mediaCaption: mediaCaption
+      };
+      
+      const target = document.getElementById("target").value;
+      socket.emit("send_message", { target, payload });
+      
+      mostrarFeedback("mediaFeedback", "Mídia enviada para a TV!", "success");
+    }
+    
+    // Enviar alerta
+    function enviarAlerta() {
+      const mensagem = document.getElementById("message").value.trim();
+      const soundType = document.getElementById("soundType").value;
+      const duration = parseInt(document.getElementById("alertDuration").value);
+      
+      if (!mensagem) {
+        mostrarFeedback("alertFeedback", "Digite uma mensagem para o alerta!", "error");
+        return;
+      }
+      
+      const payload = {
+        type: "alert",
+        message: mensagem,
+        soundType: soundType,
+        duration: duration
+      };
+      
+      const target = document.getElementById("target").value;
+      socket.emit("send_message", { target, payload });
+      
+      mostrarFeedback("alertFeedback", "Alerta enviado com sucesso!", "success");
+      
+      // Limpar campo de mensagem após envio
+      document.getElementById("message").value = "";
+    }
+    
+    // Agendar notificação
+    function agendarNotificacao() {
+      const mensagem = document.getElementById("scheduledMessage").value.trim();
+      const soundType = document.getElementById("scheduledSoundType").value;
+      const dateTime = document.getElementById("scheduledDateTime").value;
+      const duration = parseInt(document.getElementById("scheduledDuration").value);
+      
+      if (!mensagem) {
+        mostrarFeedback("scheduledFeedback", "Digite uma mensagem para a notificação!", "error");
+        return;
+      }
+      
+      if (!dateTime) {
+        mostrarFeedback("scheduledFeedback", "Selecione a data e hora!", "error");
+        return;
+      }
+      
+      const payload = {
+        type: "scheduledNotification",
+        message: mensagem,
+        soundType: soundType,
+        scheduledTime: dateTime,
+        duration: duration
+      };
+      
+      const target = document.getElementById("target").value;
+      socket.emit("send_message", { target, payload });
+      
+      mostrarFeedback("scheduledFeedback", "Notificação agendada com sucesso!", "success");
+      
+      // Limpar campos
+      document.getElementById("scheduledMessage").value = "";
+      document.getElementById("scheduledDateTime").value = "";
+    }
+    
+    // Função genérica para mostrar feedback
+    function mostrarFeedback(elementId, mensagem, tipo) {
+      const feedback = document.getElementById(elementId);
+      feedback.innerText = mensagem;
+      
+      if (tipo === "success") {
+        feedback.className = "mt-3 p-2 text-center bg-green-700 rounded";
+      } else {
+        feedback.className = "mt-3 p-2 text-center bg-red-700 rounded";
+      }
+      
+      setTimeout(() => {
+        feedback.className = "hidden mt-3 p-2 text-center";
+      }, 3000);
+    }
+    
+    // Event listeners
+    document.getElementById("newTask").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        adicionarTarefa();
+      }
+    });
+    
+    document.getElementById("message").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        enviarAlerta();
+      }
+    });
+    
+    // Inicialização
+    atualizarListaTarefas();
+    atualizarListaEventos();
+  </script>
+</body>
+</html> 
