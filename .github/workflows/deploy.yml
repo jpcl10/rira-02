@@ -1,0 +1,31 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # ou "master", se for sua branch principal
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Copy frontend files to docs
+        run: |
+          rm -rf docs
+          mkdir -p docs/painel
+          mkdir -p docs/tv
+          cp src/frontend/painel/index.html docs/painel/index.html
+          cp src/frontend/painel/otimizacoes.js docs/painel/otimizacoes.js
+          cp src/frontend/tv/index.html docs/tv/index.html
+          cp -r src/frontend/tv/assets docs/tv/assets || true
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add docs
+          git commit -m "Deploy frontend to docs" || echo "No changes to commit"
+          git push

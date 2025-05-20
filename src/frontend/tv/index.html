@@ -122,7 +122,11 @@
   </div>
 
   <div class="alert-overlay" id="alertOverlay"></div>
-  <audio id="alertSound" src=""></audio>
+  <audio id="alertSound" src="./assets/sounds/notification.mp3" preload="auto" playsinline></audio>
+  <!-- Sons pré-carregados para melhor compatibilidade -->
+  <audio id="emergencySound" src="./assets/sounds/emergency.mp3" preload="auto" playsinline></audio>
+  <audio id="notificationSound" src="./assets/sounds/notification.mp3" preload="auto" playsinline></audio>
+  <audio id="reminderSound" src="./assets/sounds/reminder.mp3" preload="auto" playsinline></audio>
 
   <script>
     // Detecta automaticamente o endereço do servidor
@@ -133,13 +137,44 @@
     const socket = io(socketURL);
     socket.emit("register", { type: "tv", id: "admin" });
 
-    // Objeto para armazenar diferentes sons de alerta
+    // Objeto para armazenar diferentes elementos de áudio pré-carregados
     const alertSounds = {
-      emergency: "/assets/sounds/emergency.mp3",
-      notification: "/assets/sounds/notification.mp3",
-      reminder: "/assets/sounds/reminder.mp3",
-      default: ""
+      emergency: document.getElementById("emergencySound"),
+      notification: document.getElementById("notificationSound"),
+      reminder: document.getElementById("reminderSound"),
+      default: document.getElementById("alertSound")
     };
+    
+    // Inicializa os sons com um clique do usuário para desbloquear a reprodução de áudio
+    function initAudio() {
+      console.log("Inicializando áudio...");
+      // Tenta reproduzir e pausar imediatamente cada som para desbloquear
+      Object.values(alertSounds).forEach(sound => {
+        if (sound && typeof sound.play === 'function') {
+          sound.volume = 0.1; // Volume baixo durante a inicialização
+          const promise = sound.play();
+          if (promise !== undefined) {
+            promise.then(() => {
+              sound.pause();
+              sound.currentTime = 0;
+              console.log("Áudio desbloqueado com sucesso");
+            }).catch(e => {
+              console.log("Áudio ainda bloqueado, aguardando interação adicional", e);
+            });
+          }
+        }
+      });
+    }
+    
+    // Adiciona múltiplos eventos para tentar desbloquear o áudio
+    document.addEventListener('click', initAudio);
+    document.addEventListener('touchstart', initAudio);
+    document.addEventListener('keydown', initAudio);
+    
+    // Tenta inicializar o áudio assim que a página carregar
+    window.addEventListener('load', function() {
+      setTimeout(initAudio, 1000); // Tenta inicializar após 1 segundo
+    });
 
     // Configurações de notificações programadas
     let scheduledNotifications = [];
@@ -173,12 +208,48 @@
       const overlay = document.getElementById("alertOverlay");
       overlay.innerText = message;
       
-      // Seleciona o som com base no tipo
-      const soundSrc = alertSounds[soundType] || alertSounds.default;
-      const alertSound = document.getElementById("alertSound");
-      alertSound.src = soundSrc;
-      alertSound.play();
+      // Seleciona o elemento de áudio com base no tipo
+      const soundElement = alertSounds[soundType] || alertSounds.default;
       
+      // Configurações para melhorar a compatibilidade com políticas de reprodução automática
+      if (soundElement) {
+        // Força a interação com o áudio para desbloquear
+        initAudio();
+        
+        // Configura o áudio para reprodução
+        soundElement.volume = 1.0;
+        soundElement.currentTime = 0; // Reinicia o áudio para garantir que toque do início
+        soundElement.muted = false;
+        soundElement.loop = false;
+        
+        // Tenta reproduzir o som com múltiplas abordagens
+        try {
+          // Método 1: Usando a API padrão
+          const playPromise = soundElement.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.error("Erro ao reproduzir som (método 1):", error);
+              
+              // Método 2: Tenta novamente após um pequeno atraso
+              setTimeout(() => {
+                try {
+                  soundElement.play();
+                  console.log("Áudio reproduzido com sucesso após atraso");
+                } catch (e) {
+                  console.error("Erro ao reproduzir som (método 2):", e);
+                }
+              }, 100);
+            });
+          }
+        } catch (error) {
+          console.error("Erro ao tentar reproduzir som:", error);
+        }
+      } else {
+        console.error("Elemento de áudio não encontrado para o tipo:", soundType);
+      }
+      
+      // Exibe o alerta visual
       overlay.style.display = "flex";
       setTimeout(() => {
         overlay.style.display = "none";
