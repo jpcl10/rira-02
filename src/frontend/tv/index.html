@@ -244,8 +244,8 @@
         width: 300,
         margin: 1,
         color: {
-          dark: '#FFF',
-          light: '#000'
+          dark: '#000',
+          light: '#FFF'
         }
       });
       
@@ -347,13 +347,77 @@
     ]);
 
     // Carrossel
-    let current = 0;
-    const slides = document.querySelectorAll(".slide");
-    setInterval(() => {
-      slides[current].classList.remove("active");
-      current = (current + 1) % slides.length;
-      slides[current].classList.add("active");
-    }, 10000);
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    
+    function showSlide(index) {
+      // Esconder todos os slides
+      slides.forEach(slide => {
+        slide.classList.remove('active');
+      });
+      
+      // Mostrar o slide atual
+      slides[index].classList.add('active');
+      currentSlide = index;
+    }
+    
+    function nextSlide() {
+      currentSlide = (currentSlide + 1) % totalSlides;
+      showSlide(currentSlide);
+    }
+    
+    function prevSlide() {
+      currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+      showSlide(currentSlide);
+    }
+    
+    // Carrossel automático desativado conforme solicitado
+    let carouselInterval = null; // Não muda automaticamente
+    
+    // Adicionar listener para eventos de mudança de aba do painel
+    socket.on("message", data => {
+      // Adicionar ao listener existente
+      if (data.type === "changeTab") {
+        // Mapear o nome da aba para o índice do slide
+        let slideIndex = 0;
+        
+        switch(data.tabName) {
+          case "clock":
+            slideIndex = 0; // Slide do relógio
+            break;
+          case "tasks":
+            slideIndex = 1; // Slide de tarefas
+            break;
+          case "notice":
+            slideIndex = 2; // Slide de avisos
+            break;
+          case "institutional":
+            slideIndex = 3; // Slide institucional
+            break;
+          case "media":
+            slideIndex = 4; // Slide de mídia
+            break;
+          case "agenda":
+            slideIndex = 5; // Slide de agenda
+            break;
+          case "qrcode":
+            slideIndex = 6; // Slide de QR code
+            break;
+          case "poll":
+            slideIndex = 7; // Slide de enquete
+            break;
+          default:
+            return; // Se não for uma aba válida, não faz nada
+        }
+        
+        // Mostrar o slide solicitado sem reiniciar o carrossel automático
+        showSlide(slideIndex);
+      }
+    });
+    
+    // Iniciar com o primeiro slide
+    showSlide(0);
   </script>
 </body>
-</html> 
+</html>

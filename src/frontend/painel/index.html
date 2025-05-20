@@ -265,6 +265,42 @@
       // Ativar o botão correspondente
       document.getElementById(tabId + 'Btn').classList.remove('text-gray-400');
       document.getElementById(tabId + 'Btn').classList.add('text-blue-400');
+      
+      // Enviar mensagem para a TV mudar para o slide correspondente
+      let tabName = '';
+      
+      // Mapear o ID da aba para o nome do slide na TV
+      switch(tabId) {
+        case 'alertasTab':
+          tabName = 'clock'; // Slide do relógio/inicial
+          break;
+        case 'tarefasTab':
+          tabName = 'tasks'; // Slide de tarefas
+          break;
+        case 'midiaTab':
+          tabName = 'media'; // Slide de mídia
+          break;
+        case 'agendaTab':
+          tabName = 'agenda'; // Slide de agenda
+          break;
+        case 'qrcodeTab':
+          tabName = 'qrcode'; // Slide de QR code
+          break;
+        case 'enqueteTab':
+          tabName = 'poll'; // Slide de enquete
+          break;
+        default:
+          tabName = 'clock'; // Padrão para o slide inicial
+      }
+      
+      // Enviar mensagem para a TV mudar para o slide correspondente
+      const payload = {
+        type: "changeTab",
+        tabName: tabName
+      };
+      
+      const target = document.getElementById("target").value;
+      socket.emit("send_message", { target, payload });
     }
     
     // Lista de tarefas atual
@@ -592,5 +628,8 @@
     atualizarListaTarefas();
     atualizarListaEventos();
   </script>
+  
+  <!-- Script de otimizações de desempenho -->
+  <script src="otimizacoes.js"></script>
 </body>
 </html>
